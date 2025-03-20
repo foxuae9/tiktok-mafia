@@ -13,11 +13,16 @@ export default function Home() {
   useEffect(() => {
     const initSocket = async () => {
       try {
-        await fetch('/api/socket')
-        const newSocket = io()
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin
+        await fetch(`${socketUrl}/api/socket`)
+        const newSocket = io(socketUrl, {
+          path: '/api/socket',
+          addTrailingSlash: false
+        })
         
         newSocket.on('connect', () => {
           console.log('Socket connected')
+          setError('') // Clear any previous errors
         })
 
         newSocket.on('room-created', ({ roomId }) => {
@@ -32,7 +37,7 @@ export default function Home() {
 
         setSocket(newSocket)
       } catch (err) {
-        console.error('Failed to connect:', err)
+        console.error('Failed to initialize socket:', err)
         setError('حدث خطأ في الاتصال. الرجاء المحاولة مرة أخرى.')
       }
     }
