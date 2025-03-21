@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const PlayerSchema = new mongoose.Schema({
   nickname: {
     type: String,
-    required: true,
+    required: [true, 'يجب إدخال اسم اللاعب'],
     unique: true,
     trim: true
   },
@@ -30,36 +30,27 @@ const PlayerSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
 }, {
   timestamps: true,
-  toJSON: {
-    virtuals: true,
-    transform: function(doc, ret) {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    }
-  }
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // إضافة index على الاسم لتحسين البحث
 PlayerSchema.index({ nickname: 1 });
 
-// التأكد من عدم تكرار الأسماء (case insensitive)
+// تحويل _id إلى id
+PlayerSchema.virtual('id').get(function() {
+  return this._id.toHexString();
+});
+
+// التأكد من عدم تكرار الاسم
 PlayerSchema.pre('save', async function(next) {
-  if (this.isModified('nickname')) {
-    const existingPlayer = await this.constructor.findOne({
-      _id: { $ne: this._id },
-      nickname: new RegExp('^' + this.nickname + '$', 'i')
-    });
+  if (this.isNew) {
+    const existingPlayer = await this.constructor.findOne({ nickname: this.nickname });
     if (existingPlayer) {
-      next(new Error('هذا الاسم مستخدم بالفعل'));
+      throw new Error('هذا الاسم مستخدم بالفعل');
     }
   }
   next();
