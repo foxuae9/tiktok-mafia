@@ -1,176 +1,246 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const cors = require("cors");
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const next = require('next');
+const { WebcastPushConnection } = require('tiktok-live-connector');
+const cors = require('cors');
 
-const app = express();
-app.use(cors({
-  origin: ["https://www.foxuae35.com", "http://localhost:3000"],
-  credentials: true
-}));
+const dev = process.env.NODE_ENV !== 'production';
+const nextApp = next({ dev });
+const nextHandler = nextApp.getRequestHandler();
 
-const server = http.createServer(app);
+let tiktokConnection = null;
 
-const io = new Server(server, {
-  cors: {
-    origin: ["https://www.foxuae35.com", "http://localhost:3000"],
-    methods: ["GET", "POST"],
+nextApp.prepare().then(() => {
+  const app = express();
+  const server = http.createServer(app);
+  
+  // إعداد CORS
+  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+  app.use(cors({
+    origin: corsOrigin,
     credentials: true
-  },
-  transports: ["websocket", "polling"] 
-});
+  }));
 
-// تخزين الغرف
-const rooms = new Map();
-
-// إضافة نقطة نهاية للتحقق من حالة السيرفر
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", connections: io.engine.clientsCount });
-});
-
-// تخزين إحصائيات البث
-const streamStats = {
-  totalComments: 0,
-  uniqueUsers: new Set(),
-  topCommenters: new Map(),
-  startTime: new Date()
-};
-
-// نقطة نهاية للتحقق من حالة السيرفر
-app.get('/health', (req, res) => {
-  const uptime = Math.floor((new Date() - streamStats.startTime) / 1000);
-  res.json({
-    status: 'ok',
-    connections: io.engine.clientsCount,
-    stats: {
-      totalComments: streamStats.totalComments,
-      uniqueUsers: streamStats.uniqueUsers.size,
-      uptime: `${Math.floor(uptime / 60)}m ${uptime % 60}s`
-    }
-  });
-});
-
-io.on("connection", (socket) => {
-  console.log("🟢 عميل جديد متصل!", socket.id);
-
-  // إرسال تأكيد الاتصال للعميل
-  socket.emit("connected", { 
-    message: "تم الاتصال بالسيرفر بنجاح",
-    socketId: socket.id 
+  const io = new Server(server, {
+    cors: {
+      origin: corsOrigin,
+      methods: ['GET', 'POST'],
+      credentials: true
+    },
+    transports: ["websocket", "polling"] 
   });
 
-  // إنشاء غرفة جديدة
-  socket.on("create-room", ({ username }) => {
-    try {
-      console.log("محاولة إنشاء غرفة جديدة من قبل:", username);
-      
-      // إنشاء معرف فريد للغرفة
-      const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      
-      // إنشاء كائن الغرفة
-      const room = {
-        id: roomId,
-        host: socket.id,
-        players: [{
-          id: socket.id,
-          username,
-          isHost: true
-        }]
-      };
-      
-      // تخزين الغرفة
-      rooms.set(roomId, room);
-      
-      // إضافة السوكيت إلى الغرفة
-      socket.join(roomId);
-      
-      // إرسال معلومات الغرفة للمضيف
-      socket.emit("room-created", { 
-        roomId,
-        message: "تم إنشاء الغرفة بنجاح"
-      });
-      
-      console.log("🎯 تم إنشاء غرفة جديدة:", roomId);
-    } catch (error) {
-      console.error("❌ خطأ في إنشاء الغرفة:", error);
-      socket.emit("error", { 
-        message: "حدث خطأ أثناء إنشاء الغرفة"
-      });
-    }
+  // تخزين الغرف
+  const rooms = new Map();
+
+  // إضافة نقطة نهاية للتحقق من حالة السيرفر
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok", connections: io.engine.clientsCount });
   });
 
-  // استقبال تعليقات TikTok
-  socket.on('tiktok-comment', (data) => {
-    // تحديث الإحصائيات
-    streamStats.totalComments++;
-    streamStats.uniqueUsers.add(data.userId);
-    
-    // تحديث قائمة أفضل المعلقين
-    const currentCount = streamStats.topCommenters.get(data.userId) || 0;
-    streamStats.topCommenters.set(data.userId, currentCount + 1);
+  // تخزين إحصائيات البث
+  const streamStats = {
+    totalComments: 0,
+    uniqueUsers: new Set(),
+    topCommenters: new Map(),
+    startTime: new Date()
+  };
 
-    // إضافة طوابع زمنية وتأثيرات
-    const enhancedData = {
-      ...data,
-      timestamp: new Date().toISOString(),
-      effects: {
-        isSpecial: data.text.includes('❤️'),
-        commentNumber: streamStats.totalComments
-      }
-    };
-
-    console.log('💬 تعليق جديد:', enhancedData);
-    
-    // إرسال التعليق لجميع المتصلين
-    io.emit('new-comment', enhancedData);
-
-    // إرسال تحديث الإحصائيات كل 10 تعليقات
-    if (streamStats.totalComments % 10 === 0) {
-      io.emit('stats-update', {
+  // نقطة نهاية للتحقق من حالة السيرفر
+  app.get('/health', (req, res) => {
+    const uptime = Math.floor((new Date() - streamStats.startTime) / 1000);
+    res.json({
+      status: 'ok',
+      connections: io.engine.clientsCount,
+      stats: {
         totalComments: streamStats.totalComments,
         uniqueUsers: streamStats.uniqueUsers.size,
-        topCommenter: [...streamStats.topCommenters.entries()]
-          .sort((a, b) => b[1] - a[1])[0]
-      });
-    }
-  });
-
-  socket.on("disconnect", () => {
-    console.log("🔌 العميل فصل الاتصال:", socket.id);
-    
-    // البحث عن الغرفة التي كان فيها العميل
-    for (const [roomId, room] of rooms.entries()) {
-      const playerIndex = room.players.findIndex(p => p.id === socket.id);
-      
-      if (playerIndex !== -1) {
-        // إزالة اللاعب من الغرفة
-        room.players.splice(playerIndex, 1);
-        
-        if (room.players.length === 0) {
-          // إذا لم يتبق لاعبين، احذف الغرفة
-          rooms.delete(roomId);
-          console.log("🗑️ تم حذف الغرفة:", roomId);
-        } else {
-          // إذا كان المغادر هو المضيف، عين مضيف جديد
-          if (room.host === socket.id) {
-            room.host = room.players[0].id;
-            room.players[0].isHost = true;
-            console.log("👑 تم تعيين مضيف جديد في الغرفة:", roomId);
-          }
-        }
-        
-        // إخطار باقي اللاعبين
-        io.to(roomId).emit("players-update", {
-          players: room.players
-        });
-        break;
+        uptime: `${Math.floor(uptime / 60)}m ${uptime % 60}s`
       }
-    }
+    });
   });
-});
 
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-  console.log(`🚀 السيرفر شغال على المنفذ ${PORT}`);
-  console.log('📊 تم تفعيل نقطة نهاية الإحصائيات على /health');
+  // التعامل مع اتصالات Socket.IO
+  io.on('connection', (socket) => {
+    console.log('عميل جديد متصل');
+
+    // عند طلب الاتصال ببث مباشر
+    socket.on('connectToLive', async (username) => {
+      try {
+        // إذا كان هناك اتصال سابق، نقوم بإغلاقه
+        if (tiktokConnection) {
+          await tiktokConnection.disconnect();
+        }
+
+        // إنشاء اتصال جديد
+        tiktokConnection = new WebcastPushConnection(username);
+
+        // الاتصال بالبث المباشر
+        await tiktokConnection.connect();
+        
+        console.log(`تم الاتصال ببث ${username} بنجاح`);
+        socket.emit('liveConnected', { status: 'success', username });
+
+        // الاستماع إلى التعليقات
+        tiktokConnection.on('chat', (data) => {
+          const comment = {
+            text: data.comment,
+            nickname: data.nickname,
+            userId: data.userId,
+            timestamp: Date.now()
+          };
+          io.emit('newComment', comment);
+        });
+
+        // الاستماع إلى الهدايا
+        tiktokConnection.on('gift', (data) => {
+          const gift = {
+            giftName: data.giftName,
+            nickname: data.nickname,
+            diamondCount: data.diamondCount,
+            timestamp: Date.now()
+          };
+          io.emit('newGift', gift);
+        });
+
+      } catch (error) {
+        console.error('خطأ في الاتصال:', error);
+        socket.emit('liveError', { 
+          status: 'error', 
+          message: 'فشل الاتصال بالبث المباشر' 
+        });
+      }
+    });
+
+    // عند قطع الاتصال
+    socket.on('disconnect', async () => {
+      if (tiktokConnection) {
+        await tiktokConnection.disconnect();
+        tiktokConnection = null;
+      }
+      console.log('تم قطع الاتصال');
+    });
+
+    // إرسال تأكيد الاتصال للعميل
+    socket.emit("connected", { 
+      message: "تم الاتصال بالسيرفر بنجاح",
+      socketId: socket.id 
+    });
+
+    // إنشاء غرفة جديدة
+    socket.on("create-room", ({ username }) => {
+      try {
+        console.log("محاولة إنشاء غرفة جديدة من قبل:", username);
+        
+        // إنشاء معرف فريد للغرفة
+        const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        // إنشاء كائن الغرفة
+        const room = {
+          id: roomId,
+          host: socket.id,
+          players: [{
+            id: socket.id,
+            username,
+            isHost: true
+          }]
+        };
+        
+        // تخزين الغرفة
+        rooms.set(roomId, room);
+        
+        // إضافة السوكيت إلى الغرفة
+        socket.join(roomId);
+        
+        // إرسال معلومات الغرفة للمضيف
+        socket.emit("room-created", { 
+          roomId,
+          message: "تم إنشاء الغرفة بنجاح"
+        });
+        
+        console.log("🎯 تم إنشاء غرفة جديدة:", roomId);
+      } catch (error) {
+        console.error("❌ خطأ في إنشاء الغرفة:", error);
+        socket.emit("error", { 
+          message: "حدث خطأ أثناء إنشاء الغرفة"
+        });
+      }
+    });
+
+    // استقبال تعليقات TikTok
+    socket.on('tiktok-comment', (data) => {
+      // تحديث الإحصائيات
+      streamStats.totalComments++;
+      streamStats.uniqueUsers.add(data.userId);
+      
+      // تحديث قائمة أفضل المعلقين
+      const currentCount = streamStats.topCommenters.get(data.userId) || 0;
+      streamStats.topCommenters.set(data.userId, currentCount + 1);
+
+      // إضافة طوابع زمنية وتأثيرات
+      const enhancedData = {
+        ...data,
+        timestamp: new Date().toISOString(),
+        effects: {
+          isSpecial: data.text.includes('❤️'),
+          commentNumber: streamStats.totalComments
+        }
+      };
+
+      console.log('💬 تعليق جديد:', enhancedData);
+      
+      // إرسال التعليق لجميع المتصلين
+      io.emit('new-comment', enhancedData);
+
+      // إرسال تحديث الإحصائيات كل 10 تعليقات
+      if (streamStats.totalComments % 10 === 0) {
+        io.emit('stats-update', {
+          totalComments: streamStats.totalComments,
+          uniqueUsers: streamStats.uniqueUsers.size,
+          topCommenter: [...streamStats.topCommenters.entries()]
+            .sort((a, b) => b[1] - a[1])[0]
+        });
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("🔌 العميل فصل الاتصال:", socket.id);
+      
+      // البحث عن الغرفة التي كان فيها العميل
+      for (const [roomId, room] of rooms.entries()) {
+        const playerIndex = room.players.findIndex(p => p.id === socket.id);
+        
+        if (playerIndex !== -1) {
+          // إزالة اللاعب من الغرفة
+          room.players.splice(playerIndex, 1);
+          
+          if (room.players.length === 0) {
+            // إذا لم يتبق لاعبين، احذف الغرفة
+            rooms.delete(roomId);
+            console.log("🗑️ تم حذف الغرفة:", roomId);
+          } else {
+            // إذا كان المغادر هو المضيف، عين مضيف جديد
+            if (room.host === socket.id) {
+              room.host = room.players[0].id;
+              room.players[0].isHost = true;
+              console.log("👑 تم تعيين مضيف جديد في الغرفة:", roomId);
+            }
+          }
+          
+          // إخطار باقي اللاعبين
+          io.to(roomId).emit("players-update", {
+            players: room.players
+          });
+          break;
+        }
+      }
+    });
+  });
+
+  const PORT = process.env.PORT || 10000;
+  server.listen(PORT, () => {
+    console.log(`🚀 السيرفر شغال على المنفذ ${PORT}`);
+    console.log('📊 تم تفعيل نقطة نهاية الإحصائيات على /health');
+  });
 });

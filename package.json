@@ -15,13 +15,16 @@
     "next": "13.4.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "socket.io": "4.6.1"
+    "socket.io": "4.6.1",
+    "socket.io-client": "^4.8.1",
+    "tiktok-live-connector": "^1.1.2"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",
-    "chalk": "^5.4.1",
     "postcss": "^8.4.21",
-    "socket.io-client": "^4.8.1",
     "tailwindcss": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }

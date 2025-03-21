@@ -1,181 +1,117 @@
-import { useEffect, useState } from 'react';
-import Head from 'next/head';
-import { getSocket, disconnectSocket } from '../lib/socket';
+import { useState, useEffect } from 'react';
+import io from 'socket.io-client';
 
-// مكون عرض التعليق
-const CommentItem = ({ comment }) => (
-  <div className="comment-item">
-    <div className="user-info">
-      <span className="username">{comment.userId}</span>
-      <span className="time">{new Date(comment.timestamp).toLocaleTimeString('ar-AE')}</span>
-    </div>
-    <p className="message">{comment.text}</p>
-  </div>
-);
+let socket;
 
 export default function Home() {
+  const [connected, setConnected] = useState(false);
+  const [username, setUsername] = useState('');
   const [comments, setComments] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [gifts, setGifts] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const socket = getSocket();
+    // استخدام متغير البيئة للاتصال بالسيرفر
+    socket = io(process.env.SOCKET_SERVER_URL);
 
-    // معالجة الاتصال
     socket.on('connect', () => {
-      console.log('🟢 تم الاتصال بالسيرفر');
-      setIsConnected(true);
+      setConnected(true);
+      console.log('تم الاتصال بالسيرفر');
     });
 
-    // استقبال التعليقات الجديدة
-    socket.on('new-comment', (comment) => {
-      console.log('💬 تعليق جديد:', comment);
-      setComments(prev => [...prev, comment].slice(-50)); // نحتفظ بآخر 50 تعليق فقط
+    socket.on('newComment', (comment) => {
+      setComments(prev => [...prev, comment].slice(-50)); // الاحتفاظ بآخر 50 تعليق فقط
     });
 
-    // معالجة قطع الاتصال
-    socket.on('disconnect', () => {
-      console.log('🔴 انقطع الاتصال');
-      setIsConnected(false);
+    socket.on('newGift', (gift) => {
+      setGifts(prev => [...prev, gift].slice(-20)); // الاحتفاظ بآخر 20 هدية فقط
     });
 
-    // تنظيف عند مغادرة الصفحة
+    socket.on('liveConnected', (data) => {
+      console.log(`تم الاتصال ببث ${data.username}`);
+      setError('');
+    });
+
+    socket.on('liveError', (data) => {
+      setError(data.message);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('خطأ في الاتصال:', error);
+      setError('فشل الاتصال بالسيرفر. يرجى المحاولة مرة أخرى.');
+    });
+
     return () => {
-      disconnectSocket();
+      if (socket) socket.disconnect();
     };
   }, []);
 
+  const connectToLive = (e) => {
+    e.preventDefault();
+    if (username.trim()) {
+      socket.emit('connectToLive', username.trim());
+    }
+  };
+
   return (
-    <div className="container">
-      <Head>
-        <title>تعليقات البث المباشر</title>
-        <meta name="description" content="عرض تعليقات البث المباشر" />
-        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet" />
-      </Head>
-
-      <main>
-        <div className="header">
-          <h1>💬 تعليقات البث</h1>
-          <div className="connection-status">
-            {isConnected ? 
-              <span className="connected">🟢 متصل</span> : 
-              <span className="disconnected">🔴 غير متصل</span>
-            }
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-center mb-8">مشاهد البث المباشر</h1>
+        
+        {/* نموذج الاتصال */}
+        <form onSubmit={connectToLive} className="mb-8">
+          <div className="flex gap-4">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="أدخل اسم المستخدم في TikTok"
+              className="flex-1 p-2 border rounded-lg"
+              dir="rtl"
+            />
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+            >
+              اتصال
+            </button>
           </div>
-        </div>
+          {error && <p className="text-red-500 mt-2">{error}</p>}
+        </form>
 
-        <div className="comments-container">
-          {comments.length === 0 ? (
-            <div className="no-comments">
-              <p>لا توجد تعليقات حالياً...</p>
-              <p className="hint">التعليقات ستظهر هنا فور وصولها</p>
-            </div>
-          ) : (
-            <div className="comments-list">
-              {comments.map((comment, index) => (
-                <CommentItem key={index} comment={comment} />
+        {/* عرض التعليقات والهدايا */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* قسم التعليقات */}
+          <div className="bg-white rounded-lg p-4 shadow">
+            <h2 className="text-xl font-bold mb-4">التعليقات</h2>
+            <div className="h-[400px] overflow-y-auto">
+              {comments.map((comment, i) => (
+                <div key={i} className="p-2 hover:bg-gray-50 border-b">
+                  <span className="font-bold">{comment.nickname}: </span>
+                  <span>{comment.text}</span>
+                </div>
               ))}
             </div>
-          )}
+          </div>
+
+          {/* قسم الهدايا */}
+          <div className="bg-white rounded-lg p-4 shadow">
+            <h2 className="text-xl font-bold mb-4">الهدايا</h2>
+            <div className="h-[400px] overflow-y-auto">
+              {gifts.map((gift, i) => (
+                <div key={i} className="p-2 hover:bg-gray-50 border-b">
+                  <p>
+                    <span className="font-bold">{gift.nickname}</span>
+                    <span className="mx-2">أرسل</span>
+                    <span className="text-purple-600">{gift.giftName}</span>
+                    <span className="mx-2">({gift.diamondCount} 💎)</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </main>
-
-      <style jsx>{`
-        .container {
-          min-height: 100vh;
-          padding: 1rem;
-          background: #f8f9fa;
-          direction: rtl;
-          font-family: 'Tajawal', sans-serif;
-        }
-
-        main {
-          max-width: 800px;
-          margin: 0 auto;
-          background: white;
-          border-radius: 15px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          padding: 2rem;
-        }
-
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-          padding-bottom: 1rem;
-          border-bottom: 2px solid #f0f0f0;
-        }
-
-        h1 {
-          margin: 0;
-          color: #2c3e50;
-          font-size: 1.8rem;
-        }
-
-        .connection-status {
-          font-size: 0.9rem;
-          padding: 0.5rem 1rem;
-          border-radius: 20px;
-          background: #f8f9fa;
-        }
-
-        .connected { color: #2ecc71; }
-        .disconnected { color: #e74c3c; }
-
-        .comments-container {
-          min-height: 400px;
-        }
-
-        .no-comments {
-          text-align: center;
-          color: #7f8c8d;
-          padding: 3rem 0;
-        }
-
-        .hint {
-          font-size: 0.9rem;
-          opacity: 0.7;
-        }
-
-        .comments-list {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-        }
-
-        .comment-item {
-          padding: 1rem;
-          background: #f8f9fa;
-          border-radius: 10px;
-          transition: transform 0.2s;
-        }
-
-        .comment-item:hover {
-          transform: translateX(-5px);
-        }
-
-        .user-info {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 0.5rem;
-        }
-
-        .username {
-          font-weight: bold;
-          color: #2c3e50;
-        }
-
-        .time {
-          font-size: 0.8rem;
-          color: #7f8c8d;
-        }
-
-        .message {
-          margin: 0;
-          color: #34495e;
-          line-height: 1.5;
-        }
-      `}</style>
+      </div>
     </div>
   );
 }

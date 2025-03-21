@@ -1,5 +1,4 @@
-const io = require("socket.io-client");
-const chalk = require("chalk"); // لتلوين المخرجات في Terminal
+const { io } = require("socket.io-client");
 
 // قائمة أسماء عربية عشوائية
 const arabicNames = [
@@ -22,13 +21,17 @@ const arabicComments = [
 ];
 
 // إنشاء اتصال Socket.IO
-const socket = io("https://tiktok-mafia-1.onrender.com", {
-    transports: ["websocket"]
+const socket = io("https://tiktok-mafia-server.onrender.com", {
+    transports: ["websocket"],
+    autoConnect: true,
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000
 });
 
 // معالجة الاتصال
 socket.on("connect", () => {
-    console.log(chalk.green("✅ تم الاتصال بالسيرفر"));
+    console.log("✅ تم الاتصال بالسيرفر");
 
     // إرسال تعليق وهمي كل 3 ثواني
     let count = 1;
@@ -39,9 +42,8 @@ socket.on("connect", () => {
             timestamp: new Date().toISOString()
         };
 
-        console.log(
-            chalk.blue(`💬 إرسال تعليق #${count}:`),
-            chalk.yellow(`[${comment.userId}]`),
+        console.log(`💬 إرسال تعليق #${count}:`,
+            `[${comment.userId}]`,
             comment.text
         );
 
@@ -52,16 +54,16 @@ socket.on("connect", () => {
 
 // معالجة الأخطاء
 socket.on("connect_error", (error) => {
-    console.log(chalk.red("❌ خطأ في الاتصال:"), error.message);
+    console.log("❌ خطأ في الاتصال:", error.message);
 });
 
 socket.on("disconnect", () => {
-    console.log(chalk.red("❌ انقطع الاتصال"));
+    console.log("❌ انقطع الاتصال");
 });
 
 // معالجة إنهاء البرنامج
 process.on("SIGINT", () => {
-    console.log(chalk.yellow("\n👋 جاري إغلاق الاتصال..."));
+    console.log("\n👋 جاري إغلاق الاتصال...");
     socket.disconnect();
     process.exit();
 });

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false,
+  reactStrictMode: true,
   async rewrites() {
     return [
       {
@@ -25,6 +25,9 @@ const nextConfig = {
         ]
       }
     ]
+  },
+  env: {
+    SOCKET_SERVER_URL: process.env.SOCKET_SERVER_URL || 'http://localhost:10000'
   },
   // إعدادات النطاق المخصص
   images: {
