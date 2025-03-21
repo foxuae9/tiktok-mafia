@@ -1,12 +1,15 @@
-import io from 'socket.io-client';
+import { io } from "socket.io-client";
 
 // إنشاء اتصال مفرد للسوكت (singleton)
 let socket;
 
 export function getSocket() {
     if (!socket) {
-        socket = io("https://tiktok-mafia-1.onrender.com", {
-            transports: ["websocket"]
+        socket = io("https://tiktok-mafia-server.onrender.com", {
+            transports: ["websocket"],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
         });
 
         // تسجيل الأحداث الأساسية
