@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
-// الاتصال بالسيرفر على Render
-const socket = io("https://tiktok-mafia-1.onrender.com", {
+// الاتصال بالسيرفر على الموقع الرئيسي
+const socket = io("https://www.foxuae35.com", {
   transports: ["websocket", "polling"],
   autoConnect: true,
   reconnection: true,
