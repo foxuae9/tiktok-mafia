@@ -6,9 +6,24 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        tajawal: ['Tajawal', 'sans-serif'],
+      },
       animation: {
-        'pulse-slow': 'pulse 3s infinite',
-      }
+        'gradient': 'gradient 8s linear infinite',
+      },
+      keyframes: {
+        gradient: {
+          '0%, 100%': {
+            'background-size': '200% 200%',
+            'background-position': 'left center'
+          },
+          '50%': {
+            'background-size': '200% 200%',
+            'background-position': 'right center'
+          },
+        },
+      },
     },
   },
   plugins: [],

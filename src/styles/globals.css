@@ -2,10 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-gray-100 text-gray-900;
-  }
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 17, 24, 39;
+  --background-end-rgb: 31, 41, 55;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  font-family: 'Tajawal', sans-serif;
+  direction: rtl;
+  @apply bg-gray-100 text-gray-900;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.3);
+  color: white;
+}
+
+.bg-gradient-animate {
+  background-size: 200% 200%;
+  animation: gradient 8s linear infinite;
 }
 
 @layer components {
