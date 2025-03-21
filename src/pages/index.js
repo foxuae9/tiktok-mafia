@@ -52,24 +52,19 @@ export default function Home() {
       return;
     }
 
+    if (!nickname || nickname.trim() === '') {
+      setError('يرجى إدخال اسم المستخدم');
+      return;
+    }
+
     setError('');
     setSuccess('');
     setLoading(true);
 
     try {
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ nickname: nickname.trim() }),
+      const res = await axios.post('/api/players', { 
+        nickname: nickname.trim() 
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'خطأ في التسجيل');
-      }
 
       setSuccess('تم التسجيل بنجاح! جاري التحويل إلى صفحة المتسابقين...');
       
@@ -79,7 +74,8 @@ export default function Home() {
       }, 2000);
       
     } catch (error) {
-      setError(error.message);
+      console.error('خطأ في التسجيل:', error);
+      setError(error.response?.data?.message || 'حدث خطأ في التسجيل');
     } finally {
       setLoading(false);
     }
@@ -102,41 +98,36 @@ export default function Home() {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        py: 4
+        py: 4,
+        textAlign: 'center'
       }}>
-        <Paper elevation={3} sx={{ p: 4, maxWidth: 600, width: '100%', textAlign: 'center' }}>
-          <Typography variant="h3" component="h1" gutterBottom>
+        <Paper 
+          elevation={3}
+          sx={{
+            p: 4,
+            width: '100%',
+            maxWidth: 600,
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <Typography variant="h3" component="h1" gutterBottom sx={{ fontFamily: 'Orbitron', fontWeight: 700 }}>
             خريطة الأبطال
           </Typography>
-          
-          <Typography variant="h6" sx={{ mb: 4, color: 'text.secondary' }}>
-            منصة المنافسة الأولى
+
+          <Typography variant="h6" gutterBottom color="text.secondary">
+            سجل الآن للمشاركة في المنافسة
           </Typography>
 
-          <Box sx={{ mb: 4 }}>
-            <img
-              src="/images/championship-logo.png"
-              alt="شعار خريطة الأبطال"
-              style={{ width: '100px', height: '100px', margin: '0 auto' }}
-            />
-          </Box>
+          {!isRegistrationOpen && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              التسجيل مغلق حالياً
+            </Alert>
+          )}
 
-          <Box sx={{ mb: 4 }}>
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }}
-            >
-              <source src="/videos/FOX_Street_Fighter.mp4" type="video/mp4" />
-            </video>
-          </Box>
-
-          {/* عداد اللاعبين */}
           <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              عدد اللاعبين المسجلين: {playerCount} / {maxPlayers}
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              عدد المشاركين: {playerCount} / {maxPlayers}
             </Typography>
             <LinearProgress 
               variant="determinate" 
@@ -144,74 +135,65 @@ export default function Home() {
               sx={{ 
                 height: 10, 
                 borderRadius: 5,
-                bgcolor: '#e3f2fd',
+                backgroundColor: 'rgba(0,0,0,0.1)',
                 '& .MuiLinearProgress-bar': {
-                  bgcolor: progress >= 100 ? '#f44336' : '#2196f3'
+                  backgroundColor: progress >= 100 ? 'error.main' : 'primary.main'
                 }
               }}
             />
-            {progress >= 100 && (
-              <Typography variant="body2" sx={{ mt: 1, color: 'error.main' }}>
-                تم اكتمال العدد المسموح به من اللاعبين
-              </Typography>
-            )}
           </Box>
 
-          {!isRegistrationOpen && (
-            <Alert severity="warning" sx={{ mb: 4 }}>
-              عذراً، التسجيل مغلق حالياً
+          <form onSubmit={handleSubmit}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="نكنيم التيك توك"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  disabled={loading || !isRegistrationOpen}
+                  required
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2
+                    }
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  fullWidth
+                  disabled={loading || !isRegistrationOpen}
+                  sx={{ 
+                    py: 1.5,
+                    borderRadius: 2,
+                    fontWeight: 'bold',
+                    position: 'relative'
+                  }}
+                >
+                  {loading ? (
+                    <CircularProgress size={24} sx={{ color: 'white' }} />
+                  ) : (
+                    'تسجيل'
+                  )}
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
             </Alert>
           )}
 
-          <Grid container spacing={3} justifyContent="center">
-            <Grid item xs={12}>
-              <TextField
-                label="أدخل نكنيم التيك توك الخاص بك"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                variant="outlined"
-                fullWidth
-                required
-                disabled={loading || progress >= 100 || !isRegistrationOpen}
-                error={!!error}
-                helperText={error}
-                sx={{ direction: 'rtl' }}
-              />
-            </Grid>
-            {success && (
-              <Grid item xs={12}>
-                <Alert severity="success">{success}</Alert>
-              </Grid>
-            )}
-            {error && (
-              <Grid item xs={12}>
-                <Alert severity="error">{error}</Alert>
-              </Grid>
-            )}
-            <Grid item xs={12} sm={6}>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                fullWidth
-                onClick={handleSubmit}
-                disabled={loading || progress >= 100 || !isRegistrationOpen}
-              >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'تسجيل'}
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Button
-                variant="outlined"
-                color="primary"
-                size="large"
-                fullWidth
-                onClick={() => router.push('/bracket')}
-              >
-                مشاهدة خريطة اللاعبين
-              </Button>
-            </Grid>
-          </Grid>
+          {success && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              {success}
+            </Alert>
+          )}
         </Paper>
       </Box>
     </Container>

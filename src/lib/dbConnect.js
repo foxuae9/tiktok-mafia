@@ -30,44 +30,55 @@ async function dbConnect() {
       retryWrites: true,
       retryReads: true,
       maxIdleTimeMS: 10000,
-      compressors: ['zlib']
+      compressors: ['zlib'],
+      connectTimeoutMS: 10000,
+      keepAlive: true,
+      keepAliveInitialDelay: 300000
     };
 
     console.log('🔄 جاري الاتصال بقاعدة البيانات...');
-    console.log('🔗 URI:', MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//<hidden>:<hidden>@'));
+    
+    // إخفاء معلومات الاتصال الحساسة من السجلات
+    const sanitizedUri = MONGODB_URI.replace(
+      /mongodb(\+srv)?:\/\/([^:]+):([^@]+)@/,
+      'mongodb$1://<username>:<password>@'
+    );
+    console.log('🔗 URI:', sanitizedUri);
 
-    cached.promise = mongoose
-      .connect(MONGODB_URI, opts)
-      .then((mongoose) => {
-        console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
-        console.log('📊 معلومات الاتصال:', {
-          host: mongoose.connection.host,
-          port: mongoose.connection.port,
-          name: mongoose.connection.name
-        });
-        return mongoose;
-      })
-      .catch((error) => {
-        console.error('❌ خطأ في الاتصال بقاعدة البيانات:', {
-          name: error.name,
-          message: error.message,
-          code: error.code
-        });
-        throw error;
-      });
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   } else {
     console.log('⏳ في انتظار اتصال قاعدة البيانات الحالي...');
   }
 
   try {
     cached.conn = await cached.promise;
+    console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
+    
+    const { host, port, name } = cached.conn.connection;
+    console.log('📊 معلومات الاتصال:', { host, port, name });
+    
+    // إضافة معالج للأخطاء
+    cached.conn.connection.on('error', (error) => {
+      console.error('❌ خطأ في اتصال قاعدة البيانات:', error);
+    });
+
+    // إضافة معالج لإعادة الاتصال
+    cached.conn.connection.on('disconnected', () => {
+      console.log('🔄 انقطع الاتصال بقاعدة البيانات، جاري إعادة الاتصال...');
+      cached.conn = null;
+      cached.promise = null;
+    });
+
+    return cached.conn;
   } catch (error) {
     cached.promise = null;
-    console.error('❌ فشل الاتصال بقاعدة البيانات:', error);
+    console.error('❌ فشل الاتصال بقاعدة البيانات:', {
+      name: error.name,
+      message: error.message,
+      code: error.code
+    });
     throw error;
   }
-
-  return cached.conn;
 }
 
 export default dbConnect;
