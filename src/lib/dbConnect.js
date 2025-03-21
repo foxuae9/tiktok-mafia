@@ -15,28 +15,41 @@ if (!cached) {
 }
 
 async function dbConnect() {
+  console.log('🔄 بدء محاولة الاتصال بقاعدة البيانات...');
+  
   if (cached.conn) {
+    console.log('✅ استخدام اتصال موجود بالفعل');
     return cached.conn;
   }
 
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000, // زيادة مهلة الاتصال
       family: 4
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts);
+    console.log('🔌 إنشاء اتصال جديد...');
+    try {
+      cached.promise = mongoose.connect(MONGODB_URI, opts);
+      console.log('✅ تم إنشاء وعد الاتصال بنجاح');
+    } catch (error) {
+      console.error('❌ خطأ في إنشاء الاتصال:', error);
+      throw error;
+    }
+  } else {
+    console.log('⏳ استخدام وعد اتصال موجود');
   }
 
   try {
     cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
+    console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
+    return cached.conn;
+  } catch (error) {
+    console.error('❌ خطأ في الاتصال بقاعدة البيانات:', error);
+    cached.promise = null; // إعادة تعيين الوعد في حالة الفشل
+    throw error;
   }
-
-  return cached.conn;
 }
 
 export default dbConnect;
