@@ -7,32 +7,23 @@ const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "*", // تقدر تحدد رابط موقعك لاحقًا
     methods: ["GET", "POST"]
   }
 });
 
 io.on("connection", (socket) => {
-  console.log("🟢 عميل جديد متصل");
-
-  socket.on("create-room", (data) => {
-    console.log("🔧 إنشاء غرفة:", data);
-    // هنا تقدر تخزن معلومات الغرفة حسب منطقك
-  });
-
-  socket.on("join-room", (data) => {
-    console.log("🚪 انضمام إلى غرفة:", data);
-    // منطق الانضمام هنا
-  });
+  console.log("🟢 عميل جديد متصل!");
 
   socket.on("disconnect", () => {
-    console.log("🔌 عميل فصل الاتصال");
+    console.log("🔌 العميل فصل الاتصال");
   });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`🚀 السيرفر شغال على المنفذ ${PORT}`);
 });
