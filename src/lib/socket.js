@@ -1,30 +1,33 @@
-import { io } from "socket.io-client";
+import io from 'socket.io-client';
 
-// الاتصال بالسيرفر على الموقع الرئيسي
-const socket = io("https://www.foxuae35.com", {
-  transports: ["websocket", "polling"],
-  autoConnect: true,
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  timeout: 10000
-});
+// إنشاء اتصال مفرد للسوكت (singleton)
+let socket;
 
-// تسجيل أحداث الاتصال
-socket.on("connect", () => {
-  console.log("🟢 تم الاتصال بالسيرفر!");
-});
+export function getSocket() {
+    if (!socket) {
+        socket = io("https://tiktok-mafia-1.onrender.com", {
+            transports: ["websocket"]
+        });
 
-socket.on("connected", (data) => {
-  console.log("✅ تأكيد الاتصال من السيرفر:", data);
-});
+        // تسجيل الأحداث الأساسية
+        socket.on('connect', () => {
+            console.log('🟢 تم الاتصال بالسيرفر');
+        });
 
-socket.on("connect_error", (error) => {
-  console.error("❌ خطأ في الاتصال:", error.message);
-});
+        socket.on('disconnect', () => {
+            console.log('🔴 انقطع الاتصال');
+        });
 
-socket.on("disconnect", (reason) => {
-  console.log("🔌 تم قطع الاتصال:", reason);
-});
+        socket.on('connect_error', (error) => {
+            console.error('❌ خطأ في الاتصال:', error.message);
+        });
+    }
+    return socket;
+}
 
-export default socket;
+export function disconnectSocket() {
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+}

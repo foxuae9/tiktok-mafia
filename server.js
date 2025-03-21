@@ -28,6 +28,28 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", connections: io.engine.clientsCount });
 });
 
+// تخزين إحصائيات البث
+const streamStats = {
+  totalComments: 0,
+  uniqueUsers: new Set(),
+  topCommenters: new Map(),
+  startTime: new Date()
+};
+
+// نقطة نهاية للتحقق من حالة السيرفر
+app.get('/health', (req, res) => {
+  const uptime = Math.floor((new Date() - streamStats.startTime) / 1000);
+  res.json({
+    status: 'ok',
+    connections: io.engine.clientsCount,
+    stats: {
+      totalComments: streamStats.totalComments,
+      uniqueUsers: streamStats.uniqueUsers.size,
+      uptime: `${Math.floor(uptime / 60)}m ${uptime % 60}s`
+    }
+  });
+});
+
 io.on("connection", (socket) => {
   console.log("🟢 عميل جديد متصل!", socket.id);
 
@@ -77,6 +99,42 @@ io.on("connection", (socket) => {
     }
   });
 
+  // استقبال تعليقات TikTok
+  socket.on('tiktok-comment', (data) => {
+    // تحديث الإحصائيات
+    streamStats.totalComments++;
+    streamStats.uniqueUsers.add(data.userId);
+    
+    // تحديث قائمة أفضل المعلقين
+    const currentCount = streamStats.topCommenters.get(data.userId) || 0;
+    streamStats.topCommenters.set(data.userId, currentCount + 1);
+
+    // إضافة طوابع زمنية وتأثيرات
+    const enhancedData = {
+      ...data,
+      timestamp: new Date().toISOString(),
+      effects: {
+        isSpecial: data.text.includes('❤️'),
+        commentNumber: streamStats.totalComments
+      }
+    };
+
+    console.log('💬 تعليق جديد:', enhancedData);
+    
+    // إرسال التعليق لجميع المتصلين
+    io.emit('new-comment', enhancedData);
+
+    // إرسال تحديث الإحصائيات كل 10 تعليقات
+    if (streamStats.totalComments % 10 === 0) {
+      io.emit('stats-update', {
+        totalComments: streamStats.totalComments,
+        uniqueUsers: streamStats.uniqueUsers.size,
+        topCommenter: [...streamStats.topCommenters.entries()]
+          .sort((a, b) => b[1] - a[1])[0]
+      });
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("🔌 العميل فصل الاتصال:", socket.id);
     
@@ -114,4 +172,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`🚀 السيرفر شغال على المنفذ ${PORT}`);
+  console.log('📊 تم تفعيل نقطة نهاية الإحصائيات على /health');
 });
