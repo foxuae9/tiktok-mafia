@@ -10,21 +10,35 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://foxuae35.com", "http://localhost:3000"],
+    origin: "*", 
     methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  transports: ["websocket", "polling"] 
 });
 
 // تخزين الغرف
 const rooms = new Map();
 
+// إضافة نقطة نهاية للتحقق من حالة السيرفر
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", connections: io.engine.clientsCount });
+});
+
 io.on("connection", (socket) => {
   console.log("🟢 عميل جديد متصل!", socket.id);
+
+  // إرسال تأكيد الاتصال للعميل
+  socket.emit("connected", { 
+    message: "تم الاتصال بالسيرفر بنجاح",
+    socketId: socket.id 
+  });
 
   // إنشاء غرفة جديدة
   socket.on("create-room", ({ username }) => {
     try {
+      console.log("محاولة إنشاء غرفة جديدة من قبل:", username);
+      
       // إنشاء معرف فريد للغرفة
       const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
       
