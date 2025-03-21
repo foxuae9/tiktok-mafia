@@ -16,20 +16,17 @@ if (!cached) {
 
 async function dbConnect() {
   if (cached.conn) {
-    console.log('✅ استخدام اتصال قاعدة البيانات المخزن مؤقتاً');
     return cached.conn;
   }
 
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+      family: 4
     };
 
-    console.log('🔄 جاري الاتصال بقاعدة البيانات...');
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
-      return mongoose;
-    });
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
   try {
