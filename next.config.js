@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    domains: ['vercel.app'],
+    unoptimized: true
+  },
   async rewrites() {
     return [
       {
@@ -19,6 +23,10 @@ const nextConfig = {
         source: '/:path*',
         headers: [
           {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
             key: 'Access-Control-Allow-Origin',
             value: '*'
           }
@@ -28,10 +36,6 @@ const nextConfig = {
   },
   env: {
     SOCKET_SERVER_URL: process.env.SOCKET_SERVER_URL || 'http://localhost:10000'
-  },
-  // إعدادات النطاق المخصص
-  images: {
-    domains: ['www.foxuae35.com']
   }
 }
 

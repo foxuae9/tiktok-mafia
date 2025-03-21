@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import {
   Box,
   Container,
@@ -9,7 +10,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import axios from 'axios';
-import styles from '../styles/Bracket.module.css';
+import styles from '@/styles/Bracket.module.css';
 
 export default function Bracket() {
   const [players, setPlayers] = useState([]);
@@ -63,7 +64,13 @@ export default function Bracket() {
       <div className={styles.container}>
         <div className={styles.header}>
           <div className={styles.logo}>
-            <img src="/images/LO.png" alt="FOXUAE35" />
+            <Image 
+              src="/images/LO.png" 
+              alt="FOXUAE35" 
+              width={100}
+              height={100}
+              priority
+            />
             <h1>خريطة الأبطال</h1>
           </div>
         </div>
