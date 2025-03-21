@@ -1,44 +1,38 @@
 import dbConnect from '@/lib/dbConnect';
 import RegistrationStatus from '@/models/RegistrationStatus';
 
-export async function getRegistrationStatus() {
-  await dbConnect();
-  let status = await RegistrationStatus.findOne();
-  if (!status) {
-    status = await RegistrationStatus.create({ isOpen: true });
-  }
-  return status;
-}
-
-export async function setRegistrationStatus(isOpen) {
-  await dbConnect();
-  let status = await RegistrationStatus.findOne();
-  if (!status) {
-    status = await RegistrationStatus.create({ isOpen });
-  } else {
-    status.isOpen = isOpen;
-    await status.save();
-  }
-  return status;
-}
-
 export default async function handler(req, res) {
   try {
+    await dbConnect();
+
     if (req.method === 'GET') {
-      const status = await getRegistrationStatus();
-      res.status(200).json(status);
-    } else if (req.method === 'POST') {
-      const { isOpen } = req.body;
-      if (typeof isOpen !== 'boolean') {
-        return res.status(400).json({ message: 'يجب تحديد حالة التسجيل' });
+      let status = await RegistrationStatus.findOne({});
+      
+      if (!status) {
+        status = await RegistrationStatus.create({ isOpen: true });
       }
-      const status = await setRegistrationStatus(isOpen);
-      res.status(200).json(status);
-    } else {
-      res.status(405).json({ message: 'طريقة غير مسموح بها' });
+      
+      return res.status(200).json(status);
     }
+
+    if (req.method === 'POST') {
+      const { isOpen } = req.body;
+      
+      let status = await RegistrationStatus.findOne({});
+      
+      if (!status) {
+        status = await RegistrationStatus.create({ isOpen });
+      } else {
+        status.isOpen = isOpen;
+        await status.save();
+      }
+      
+      return res.status(200).json(status);
+    }
+
+    return res.status(405).json({ message: 'Method not allowed' });
   } catch (error) {
-    console.error('❌ خطأ في إدارة حالة التسجيل:', error);
-    res.status(500).json({ message: 'حدث خطأ في إدارة حالة التسجيل' });
+    console.error('خطأ:', error);
+    return res.status(500).json({ message: error.message });
   }
 }
