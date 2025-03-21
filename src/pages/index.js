@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import { getSocket, disconnectSocket } from '@/lib/socket';
+import { getSocket, disconnectSocket } from '../lib/socket';
 
 // مكون عرض التعليق
 const CommentItem = ({ comment }) => (
