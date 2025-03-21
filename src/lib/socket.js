@@ -1,11 +1,12 @@
-import { io } from 'socket.io-client';
+import { io } from "socket.io-client";
 
-// تهيئة الاتصال بالسيرفر
-const socket = io('https://tiktok-mafia-1.onrender.com', {
-    autoConnect: true,
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
+// الاتصال بالسيرفر على Render بدون أي مسار إضافي
+const socket = io("https://tiktok-mafia-1.onrender.com", {
+  transports: ["websocket"],
+  autoConnect: true,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
 });
 
 // الاستماع لأحداث الاتصال
