@@ -36,7 +36,6 @@ const nextConfig = {
   },
   env: {
     MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/street-fighter-tournament',
-    NODE_ENV: process.env.NODE_ENV || 'development',
     SOCKET_SERVER_URL: process.env.SOCKET_SERVER_URL || 'http://localhost:10000'
   }
 }
