@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import Player from '@/models/Player';
-import { getRegistrationStatus } from '../admin/registration-status';
+import { getRegistrationStatus } from '@/pages/api/admin/registration-status';
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -17,8 +17,8 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      const isRegistrationOpen = await getRegistrationStatus();
-      if (!isRegistrationOpen) {
+      const status = await getRegistrationStatus();
+      if (!status.isOpen) {
         return res.status(403).json({ message: 'التسجيل مغلق حالياً' });
       }
 
