@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import io from 'socket.io-client'
 import Head from 'next/head'
+import socket from '@/lib/socket'
 
 export default function NewRoom() {
   const router = useRouter()
@@ -14,49 +14,32 @@ export default function NewRoom() {
       return
     }
 
-    const initSocket = async () => {
-      try {
-        console.log('Connecting to socket server...')
-        const socketUrl = window.location.origin
-        const socket = io(socketUrl, {
-          path: '/api/socket',
-          addTrailingSlash: false,
-          transports: ['polling', 'websocket'],
-          reconnectionAttempts: 5,
-          timeout: 10000
-        })
+    console.log('بدء إنشاء غرفة جديدة...')
 
-        socket.on('connect', () => {
-          console.log('Connected to socket')
-          socket.emit('create-room', { username })
-        })
-
-        socket.on('connect_error', (error) => {
-          console.error('Connection error:', error)
-          setError('حدث خطأ في الاتصال بالخادم')
-        })
-
-        socket.on('room-created', ({ roomId }) => {
-          console.log('Room created:', roomId)
-          router.push(`/host/${roomId}`)
-        })
-
-        socket.on('error', ({ message }) => {
-          console.error('Socket error:', message)
-          setError(message)
-        })
-
-        return () => {
-          socket.disconnect()
-        }
-
-      } catch (error) {
-        console.error('Failed to connect:', error)
-        setError('حدث خطأ في الاتصال بالخادم')
-      }
+    // الاستماع لحدث إنشاء الغرفة
+    const handleRoomCreated = ({ roomId }) => {
+      console.log('✅ تم إنشاء الغرفة:', roomId)
+      router.push(`/host/${roomId}`)
     }
 
-    initSocket()
+    // الاستماع للأخطاء
+    const handleError = ({ message }) => {
+      console.error('❌ خطأ:', message)
+      setError(message)
+    }
+
+    // إضافة المراقبين للأحداث
+    socket.on('room-created', handleRoomCreated)
+    socket.on('error', handleError)
+
+    // إرسال طلب إنشاء غرفة
+    socket.emit('create-room', { username })
+
+    // تنظيف المراقبين عند مغادرة الصفحة
+    return () => {
+      socket.off('room-created', handleRoomCreated)
+      socket.off('error', handleError)
+    }
   }, [router])
 
   return (
