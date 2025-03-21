@@ -5,7 +5,7 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors({
-  origin: "https://www.foxuae35.com",
+  origin: ["https://www.foxuae35.com", "http://localhost:3000"],
   credentials: true
 }));
 
@@ -13,7 +13,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://www.foxuae35.com",
+    origin: ["https://www.foxuae35.com", "http://localhost:3000"],
     methods: ["GET", "POST"],
     credentials: true
   },
