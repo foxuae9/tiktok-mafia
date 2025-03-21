@@ -1,14 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "next build",
-  "devCommand": "next dev",
-  "outputDirectory": ".next",
-  "functions": {
-    "src/pages/api/socket.js": {
-      "maxDuration": 60
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
     }
-  },
-  "env": {
-    "NEXT_PUBLIC_SOCKET_URL": "https://tiktok-mafia-a7yr.vercel.app"
-  }
+  ],
+  "routes": [
+    {
+      "src": "/api/socket",
+      "dest": "/api/socket"
+    }
+  ]
 }
