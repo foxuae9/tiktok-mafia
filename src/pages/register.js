@@ -18,10 +18,11 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    
     try {
       await axios.post('/api/players', { nickname });
       setSuccess(true);
-      setError('');
       setTimeout(() => {
         router.push('/bracket');
       }, 2000);
@@ -49,25 +50,25 @@ export default function Register() {
           </Alert>
         )}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
           <TextField
             margin="normal"
             required
             fullWidth
             id="nickname"
-            label="اسم اللاعب"
+            label="أدخل نكنيم التيك توك الخاص بك"
             name="nickname"
             autoFocus
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            sx={{ direction: 'rtl' }}
+            disabled={success}
           />
           <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
-            disabled={success}
+            disabled={success || !nickname.trim()}
           >
             تسجيل
           </Button>
