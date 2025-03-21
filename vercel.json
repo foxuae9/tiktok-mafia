@@ -13,6 +13,6 @@
     }
   ],
   "env": {
-    "SOCKET_SERVER_URL": "https://your-render-app.onrender.com"
+    "SOCKET_SERVER_URL": "https://tiktok-mafia-server.onrender.com"
   }
 }
