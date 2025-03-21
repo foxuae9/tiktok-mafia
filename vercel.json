@@ -14,5 +14,10 @@
   ],
   "env": {
     "SOCKET_SERVER_URL": "https://tiktok-mafia-server.onrender.com"
-  }
+  },
+  "buildCommand": "next build",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next"
 }
