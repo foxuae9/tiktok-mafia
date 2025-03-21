@@ -16,27 +16,19 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/api/socket',
+        source: '/:path*',
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: '*',
-          },
-          {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET,POST,OPTIONS',
-          },
-          {
-            key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type',
-          },
-        ],
-      },
+            value: '*'
+          }
+        ]
+      }
     ]
   },
-  webpack: (config) => {
-    config.experiments = { ...config.experiments, topLevelAwait: true }
-    return config
+  // إعدادات النطاق المخصص
+  images: {
+    domains: ['www.foxuae35.com']
   }
 }
 
