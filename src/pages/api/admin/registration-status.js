@@ -1,13 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import RegistrationStatus from '@/models/RegistrationStatus';
 
-// التأكد من وجود الملف وإنشاءه إذا لم يكن موجوداً
-try {
-  readFileSync(statusFilePath);
-} catch {
-  writeFileSync(statusFilePath, JSON.stringify({ isOpen: true }));
-}
-
 export async function getRegistrationStatus() {
   await dbConnect();
   let status = await RegistrationStatus.findOne();

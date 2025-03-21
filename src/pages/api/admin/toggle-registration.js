@@ -7,15 +7,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const currentStatus = getRegistrationStatus();
-    setRegistrationStatus(!currentStatus.isOpen);
+    await dbConnect();
+    const currentStatus = await getRegistrationStatus();
+    const newStatus = await setRegistrationStatus(!currentStatus.isOpen);
     
     res.status(200).json({ 
       message: 'تم تحديث حالة التسجيل بنجاح',
-      isOpen: !currentStatus.isOpen
+      isOpen: newStatus.isOpen
     });
   } catch (error) {
-    console.error('خطأ في تغيير حالة التسجيل:', error);
+    console.error('❌ خطأ في تغيير حالة التسجيل:', error);
     res.status(500).json({ message: 'حدث خطأ أثناء تغيير حالة التسجيل' });
   }
 }
