@@ -1,0 +1,15 @@
+{
+  "players": [
+    {
+      "id": "1742557683712",
+      "nickname": "111",
+      "status": "active",
+      "wins": 0,
+      "losses": 0,
+      "isEliminated": false,
+      "currentRound": 1,
+      "createdAt": "2025-03-21T11:48:03.712Z",
+      "updatedAt": "2025-03-21T11:48:03.712Z"
+    }
+  ]
+}
