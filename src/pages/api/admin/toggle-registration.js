@@ -1,4 +1,4 @@
-import dbConnect from '../../../../lib/dbConnect';
+import dbConnect from '@/lib/dbConnect';
 import { getRegistrationStatus, setRegistrationStatus } from './registration-status';
 
 export default async function handler(req, res) {
